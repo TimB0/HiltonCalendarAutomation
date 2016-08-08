@@ -1,0 +1,52 @@
+apply plugin: 'java'
+apply plugin: 'idea'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+version = '1.0'
+
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+def sdkDir = properties.getProperty('sdk.dir')
+
+
+jar {
+    doLast {
+        tasks.dex.execute()
+    }
+}
+
+project.ext {
+    dexDir = new File('build/dex')
+    distDir = new File('./dist')
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    compile fileTree(dir: sdkDir + '/platforms/android-23', include: '*.jar')
+    compile group: 'junit', name: 'junit', version: '4.12'
+}
+
+
+
+task dex(dependsOn: 'jar', type:Exec) {
+    println 'Building dex...'
+    project.dexDir.mkdirs()
+    workingDir '.'
+    commandLine sdkDir + '/build-tools/23.0.2/' + 'dx', '--dex', '--no-strict', '--output=' + buildDir +'/dex/' + project.name + '.jar', jar.archivePath
+    doLast {
+        tasks.dist.execute()
+    }
+}
+
+task dist(dependsOn: 'dex', type:Copy) {
+    project.distDir.mkdirs()
+    from(project.dexDir)
+    into(project.distDir)
+    include('*.jar')
+}
